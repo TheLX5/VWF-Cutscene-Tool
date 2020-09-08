@@ -120,7 +120,7 @@ def convert_txt(msg_number, msg_path):
                 raise ConvertError("Invalid tag found. It may be the tag is unclosed or it contains nothing")
 
             get_def = definition.get(string)
-            j = 1 if get_def else 0
+            j = 1 if get_def is not None else 0
             command = get_tag(string)
 
             if j == 1:
