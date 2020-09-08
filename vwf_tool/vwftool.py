@@ -1,5 +1,6 @@
 import sys
 import re
+from contextlib import suppress
 
 
 class DefineError(Exception):
@@ -59,7 +60,10 @@ def convert(convert_path):
             continue
         current_file = re.search(r"^([0-9A-Fa-f]+)\s+(.+)$", line_)
         if current_file.group():
-            convert_txt(current_file.group(1), current_file.group(2))
+            try:
+                convert_txt(current_file.group(1), current_file.group(2))
+            except ConvertError as e:
+                print(f"Couldn't convert file {current_file.group()}. Reason: {str(e)}")
         else:
             print(f"Line {str(x)}: Invalid information, {line_}")
 
@@ -102,7 +106,7 @@ def convert_txt(msg_number, msg_path):
             if parse_tag:
                 content = re.sub(r"^(\[[^\[\]]+?])", r"", content)
                 string = parse_tag.group()
-                p = p + 1
+                p += 1
             elif parse_space:
                 content = re.sub(r"^\s+", r"", content)
                 if space[0] >= 0:
@@ -338,7 +342,7 @@ def create(output_path):
                 ptr += "\n\t\t\tdw"
             else:
                 ptr += ", "
-            try:
+            with suppress(Exception):
                 get_num = num_used[f"{i:02d}"] - 1
                 ptr = ptr + f" .{i:02X}"
                 vwf_data = f'{vwf_data}\n.{i:02X}'
@@ -348,8 +352,6 @@ def create(output_path):
                     else:
                         vwf_data = f'{vwf_data},${(bin_data[get_num][j] & 0xFF):02X}'
                 del num_used[f"{i:02d}"]
-            except Exception as e:
-                print(f'Encountered {str(e)} while creating, ignoring...')
 
         code = """
 incsrc "vwf_defines.asm"
@@ -404,13 +406,14 @@ def get_tag(orig_tag):
         re.compile(r"^\[\s*jump\s*=\s*(.+)\s*]"): [0, 1],
         re.compile(r"^\[\s*skip\s*=\s*(.+)\s*]"): [0, 1],
         re.compile(r"^\[\s*/\s*skip\s*]"): [0],
-        re.compile(r"^\[\s*label\s*=\s*(.+)\s*]"): [0, 1]
     }
     for h, pair in enumerate(regexes.items(), start=0x80):
         tag = pair[0]
         groups = pair[1]
         if r := re.search(tag, orig_tag):
-            return [h].extend([r.group(o) for o in groups])
+            m_groups = [h]
+            m_groups.extend([r.group(o) for o in groups])
+            return m_groups
 
     if r := re.search(r"^\[\s*label\s*=\s*(.+)\s*]", orig_tag):  # this was for some reason 0x01, so special case it is
         return [0x01, r.group(0), r.group(1)]
