@@ -1,0 +1,51 @@
+body
+{
+	margin: 4px;
+	font-family: arial, helvetica;
+	font-size: 13px;
+}
+
+h3
+{
+	border-bottom: 5px solid #0040F8;
+}
+
+h4
+{
+	border-top: 1px solid #0080F8;
+	border-left: 2px solid #0080F8;
+	border-bottom: 4px solid #0080F8;
+}
+
+.pad
+{
+	margin-left: 10px;
+}
+
+.column
+{
+	margin: 6px 0px 2px 3px;
+	padding-left: 5px;
+	border-left: 1px solid #8080F8;
+	border-bottom: 3px solid #8080F8;
+}
+.tag
+{
+	font-family: Courier New;
+}
+
+pre.quote
+{
+	border: 1px solid #404040;
+	background-color: #F0F0F0;
+}
+
+table
+{
+	font-size: 13px;
+}
+
+td
+{
+	white-space: nowrap;
+}

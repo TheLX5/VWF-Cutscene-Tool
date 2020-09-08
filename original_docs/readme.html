@@ -1,0 +1,208 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<link href='style.css' rel='stylesheet' type='text/css'>
+<title>Variable Width Font</title>
+</head>
+<body>
+
+<h3>Variable Width Font Cutscene</h3>
+<div class='pad'>
+ This is a kit for easily creating a flexible cutscene in SMW. The kit contains;
+ <pre class='quote'>
+<font color='blue'>ExGFX83.bin</font>
+<font color='blue'>vwf.bin</font>
+<font color='blue'>width.bin</font>
+ <b><font color='red'>-bin</font></b>
+  -perl.bat
+  <font color='blue'>-vwftool.pl</font>
+  <font color='blue'>-def.txt</font>
+  <font color='green'>-list.txt</font>
+  <b><font color='red'>-msg</font></b>
+   <font color='green'>-hello_world.txt</font>
+   <font color='green'>level106.txt</font>
+ <b><font color='red'>-doc</font></b>
+  -readme.html
+  -style.css
+ <b><font color='red'>-sprites</font></b>
+  <font color='blue'>-vwf.asm</font>
+  <font color='blue'>-vwf.cfg</font>
+  <font color='green'>-vwf_data1.asm</font>
+  <font color='green'>-vwf_data1.cfg</font>
+ </pre>
+ The things which must be required without any modification are colored in blue. The samples are colored in green.
+</div>
+
+
+<h4>Cursors' graphics</h4>
+<div class='pad'>
+ Insert ExGFX83.bin to your hack (rename the file name if necessary), and use the ExGFX in SP1. It uses the 2 tiles originally used by shattered blocks.
+</div>
+
+<h4>Activating the VWF scene</h4>
+<div class='pad'>
+ For activation in SMW, you only need main sprite, which is named vwf.asm (and vwf.cfg as well), and sprites containing VWF data, and vwf.bin and width.bin.
+ Just put the sprites you need into the sprites folder of your Sprite Tool directory, and put vwf.bin and width.bin into the same directory as sprite_tool.exe.
+ <br><br>
+ Open a level you want, and erase all objects and sprites first. Also just to be safe or something, you may want to set initial Mario's coordinates both to 00.
+ Place the main sprite, and then a sprite containing data. (in this sample, it's vwf_data1)
+ <font size=+1 color='red'>Currently, do not set the extra info to 3 to place the custom sprite, vwf.asm. Use 2; 3 is reserved for static cutscene.</font>
+ The second sprite's coordinates are important; it decides which message to render by treating the initial X coordinate as lower 4-bit ID and the initial Y coordinate as upper 4-bit ID.
+ In the sample, it only contains 2 types of messages; 00 and 01, thus available coordinates are only Y:0 X:0 and Y:0 X:1, or the game will crash.
+</div>
+ 
+<h3>Variable Width Font Tool</h3>
+<div class='pad'>
+ This tool converts a text file containing sentences and/or tags (hereafter referred to as a "VWF script") into a sprite to be inserted with a sprite by Sprite Tool.
+ The format of VWF scripts is based on html and it's therefore very similar to it, and specifically it's as follows.<br><br>
+ 1) Basically uses characters, and additionally tags<br>
+ 2) Continous white spaces are treated as one space
+</div>
+<h4>Using the tool</h4>
+<div class='pad'>
+ In the folder named "bin", there is a Perl script works as a tool.
+ You need to have <a href='http://mior.a.orn.jp/'>ActivePerl</a> installed to execute the Perl script.
+ The usage is as follows;
+ <pre>vwftool definition.txt list.txt out.txt</pre>
+ <table>
+  <tr><td>vwftool</td><td>-</td><td>The executable file or the Perl script</td></tr>
+  <tr><td>definition.txt</td><td>-</td><td>The definition file</td></tr>
+  <tr><td>list.txt</td><td>-</td><td>The list file containing the index of the message and the file path of the VWF scripts</td></tr>
+  <tr><td>out.txt</td><td>-</td><td>The path of the output file containing the result</td></tr>
+ </table>
+ <div class='column'>Definition file</div>
+ <div class='pad'>
+  Basing on the definition, the tool converts characters in VWF scripts into the hex numbers. You write characters and/or tags in the file.
+  Each character or tag will be associated with the number in numerical order; in other words, the first character or tag is 0x00, the next one is 0x01, and so on.
+  Note that each number is assigned to 'one' character or one tag. If you want to use 2 or more characters for the number, you have to specify it as a tag, which is quoted by '[' and ']'.
+  You can also use a tag when the character was duplicated with other, as they will be treated as another character.
+  Also, any white space in the definition file will <b>all</b> be ignored, so you may want to separate each character or tag with some spaces to make it more readable, or at least break a line per 8 numbers or so, so that you don't get confused in case you take a look at it later.<br><br>
+  <i>Example:</i>
+  <pre class='quote'>ABCDEFGHIJKLMNOPQRSTUVWXYZ["]"</pre>
+  <pre class='quote'>A   B   C   D   E   F   G   H<br>I   J   K   L   M   N   O   P<br>Q   R   S   T   U   V   W   X<br>Y   Z   ["] "</pre>
+ </div>
+ <div class='column'>List file</div>
+ <div class='pad'>
+  In the list file, you specify the index and the file path of the VWF scripts.
+  The range of the index can be anywhere between 00-FF, however, it's recommended to specify in numerical order, to reduce the result size.
+  VWF scripts must be in the folder named "msg", and you have to specify the file path without "msg".
+  <pre class='quote'>00 HelloWorld.txt<br>01 Message.txt		// This is a comment. This part will be ignored.</pre>
+  As seen in the example above, you can write a comment in the right side of '<code>//</code>'.
+ </div>
+</div>
+<h4>Writing VWF script</h4>
+<div class='pad'>
+ Basically, you can write the VWF script like you write HTML documents.
+ Since any line break is also treated as space in conversion, you can freely break a line in the VWF script file so that one line won't get long horizontally; this is exactly the same as HTML.
+ Similarly to the definition file, you can write a comment in the same way.<br>
+ Below is the reference of reserved tags.
+ 
+ <div class='column tag'>[end=*]</div>
+ <div class='pad'>
+  Ends the VWF scene. You specify hexadecimal value 00-1F, exit, or goal in *.<br>
+  When -<br>
+  - hexadecimal value is specified, it activates the screen exit whose screen number is corresponding to the specified number.<br>
+  - exit is specified, it activates sides exit and the player goes back to the overworld.<br>
+  - goal is specified, it activates the goal.
+  - sgoal is specified, it activates the secret goal.
+ </div>
+
+ <div class='column tag'>[ ]</div>
+ <div class='pad'>
+  Forcibly outputs a space.
+ </div>
+
+ <div class='column tag'>[br]</div>
+ <div class='pad'>
+  Breaks a line.
+ </div>
+
+ <div class='column tag'>[wait]</div>
+ <div class='pad'>
+  Waits for the player's inputs. Restarts the VWF scene if either the A button is pressed or the B button is being held.
+ </div>
+
+ <div class='column tag'>[wait=*]</div>
+ <div class='pad'>
+  Waits until the specified amount of frame that you specify in decimal in * is passed. The number can be anywhere between 0-255.
+ </div>
+
+ <div class='column tag'>[font color=*]</div>
+ <div class='pad'>
+  Changes the font color. * can be anywhere between 1-3. When you specify 1 in *, alternatively you can use the tag [/font color]. Besides, you can spell it 'colour' instead of 'color'.
+ </div>
+
+ <div class='column tag'>[pad left=*] [pad right=*] [pad=*,*]</div>
+ <div class='pad'>
+  Sets up padding width of either left side or right side, or both at once. When you specify both at once, the first one is for left, the second one if for right, respectively.
+  * can be anywhere between 0-255. Although, you have to beware of it if (256 - left_width - right_width) is minus or much width, to render any terms, can be left,
+  or the game may be crashed or freezed because of terms that were unable to fit in space.<br>
+  Initially, the left width and the right width are both set to 8.
+ </div>
+
+ <div class='column tag'>[music=*]</div>
+ <div class='pad'>
+  Changes the music currently playing. You specify it in hexadecimal value in * and it can be anywhere between 00-FF. Of course, the number should be the valid number to play the music.<br>
+  As the specification of SMW's SPC is, you can fade out the music by specifying 80 or higher.
+ </div>
+
+ <div class='column tag'>[erase]</div>
+ <div class='pad'>
+  Erases all lines of the main message window.
+ </div>
+
+ <div class='column tag'>[topic] [/topic]</div>
+ <div class='pad'>
+  Changes the topic. The tag must be closed by [/topic] and the topic must be in 256 pixels, or the game is most likely to freeze. In the topic, the current font color + 4 is used to render; namely, 5-7.<br>
+  In practice, [topic] and [/topic] is the completely same, but you don't want to use the [topic] tag all the time as it's not readable visually, do you?
+ </div>
+
+ <div class='column tag'>[sprite=*](X,Y,T,P,S)...[/sprite]</div>
+ <div class='pad'>
+  Shows the sprite tiles at any place; but basically you only want to show them on the top display.<br>
+  In the first sprite tag, you specify the number of the sprite tiles in hexadecimal which can be anywhere between 1-7F.
+  Between the sprite tags, you specify OAM attributes in (X,Y,T,P,S) as many times as you specified in *. Each character stands for X, Y, Tile, Property, Size, respectively.
+  As the name suggests, X and Y are coordinates to show the tile,
+  Tile is the tile number, Property is the property of the tile in YXPPCCCT format and these 4 attributes should be specified in hexadecimal.
+  Size is the tile size, and should be named either small or big.
+ </div>
+
+ <div class='column tag'>[sprite=erase]</div>
+ <div class='pad'>
+  Erases all sprite tiles. Technically, it first turns off the top display so that it won't look ugly by preventing all tiles from disappearing suddnely, and then erases them.<br>
+  Since it automatically erases all tiles every time you use the [sprite=*][/sprite], you don't need to use this tag explicitly.
+  You may use this tag if you want to hide sprites for a while temporarily.
+ </div>
+
+ <div class='column tag'>[label=*]</div>
+ <div class='pad'>
+  Defines a label in the current position. This tag itself doesn't interfere the result size.
+ </div>
+
+ <div class='column tag'>[branch=*] [branch2=*]</div>
+ <div class='pad'>
+  Lets the player select one sentence from last 2-5 sentences. Depends on which is selected, jumps to either label.
+  You separate each label by a comma, and the tool automatically calculates the number of labels in the tag.
+  After selected, it breaks one line automatically. However, if you specify the tag name as branch2, it won't. 
+ </div>
+
+ <div class='column tag'>[jump=*]</div>
+ <div class='pad'>
+  Jumps to the label.
+ </div>
+
+ <div class='column tag'>[skip=*]</div>
+ <div class='pad'>
+  Jumps to the label if the Start button is pressed.
+  The label should be in right before the [end=*] tag<!--, or you need to erase sentences, set up OAM and the topic again, or the VWF scene will just get screwed up.-->
+ </div>
+<!--
+ <div class='column tag'>[/skip]</div>
+ <div class='pad'>
+  Deactivates the [skip=*]. Rquired only if you don't jump to right before the [end=*] tag, or as written above, you have to reset a few things.
+ </div>
+-->
+</div>
+</body>
+</html>
+
