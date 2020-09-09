@@ -3,6 +3,30 @@ import re
 from contextlib import suppress
 
 
+reg_cache = {
+    re.compile(r"^\[\s*end\s*=\s*([0-9A-Fa-f]+|exit|s?goal)\s*]"): [0, 1],
+    re.compile(r"^\[ ]"): [0],
+    re.compile(r"^\[\s*br\s*]"): [0],
+    re.compile(r"^\[\s*wait\s*]"): [0],
+    re.compile(r"^\[\s*wait\s*=\s*(\d+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*(?:font\s+colou?r\s*=\s*1|/font\s+colou?r)\s*]"): [0],
+    re.compile(r"^\[\s*font\s+colou?r\s*=\s*2\s*]"): [0],
+    re.compile(r"^\[\s*font\s+colou?r\s*=\s*3\s*]"): [0],
+    re.compile(r"^\[\s*pad\s+left\s*=\s*(\d+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*pad\s+right\s*=\s*(\d+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*pad\s*=\s*(\d+)\s*,\s*(\d+)\s*]"): [0, 1, 2],
+    re.compile(r"^\[\s*music\s*=\s*([0-9a-fA-F]+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*erase\s*]"): [0],
+    re.compile(r"^\[\s*/?topic\s*]"): [0],
+    re.compile(r"^\[\s*sprite\s*=\s*([0-9A-Fa-f]+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*sprite\s*=\s*erase\s*]"): [0],
+    re.compile(r"^\[\s*branch2?\s*=\s*(.+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*jump\s*=\s*(.+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*skip\s*=\s*(.+)\s*]"): [0, 1],
+    re.compile(r"^\[\s*/\s*skip\s*]"): [0],
+}
+
+
 class DefineError(Exception):
     pass
 
@@ -385,44 +409,31 @@ print "MAIN ",pc
 
 
 def get_tag(orig_tag):
-    regexes = {
-        re.compile(r"^\[\s*end\s*=\s*([0-9A-Fa-f]+|exit|s?goal)\s*]"): [0, 1],
-        re.compile(r"^\[ ]"): [0],
-        re.compile(r"^\[\s*br\s*]"): [0],
-        re.compile(r"^\[\s*wait\s*]"): [0],
-        re.compile(r"^\[\s*wait\s*=\s*(\d+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*(?:font\s+colou?r\s*=\s*1|/font\s+colou?r)\s*]"): [0],
-        re.compile(r"^\[\s*font\s+colou?r\s*=\s*2\s*]"): [0],
-        re.compile(r"^\[\s*font\s+colou?r\s*=\s*3\s*]"): [0],
-        re.compile(r"^\[\s*pad\s+left\s*=\s*(\d+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*pad\s+right\s*=\s*(\d+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*pad\s*=\s*(\d+)\s*,\s*(\d+)\s*]"): [0, 1, 2],
-        re.compile(r"^\[\s*music\s*=\s*([0-9a-fA-F]+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*erase\s*]"): [0],
-        re.compile(r"^\[\s*/?topic\s*]"):  [0],
-        re.compile(r"^\[\s*sprite\s*=\s*([0-9A-Fa-f]+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*sprite\s*=\s*erase\s*]"): [0],
-        re.compile(r"^\[\s*branch2?\s*=\s*(.+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*jump\s*=\s*(.+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*skip\s*=\s*(.+)\s*]"): [0, 1],
-        re.compile(r"^\[\s*/\s*skip\s*]"): [0],
-    }
-    for h, pair in enumerate(regexes.items(), start=0x80):
+    # r = re.search(r"^\[\s*label\s*=\s*(.+)\s*]", orig_tag) # uncomment this and delete the bottom one if you
+    # if r:                                                  # care about this script being compatible with python < 3.8
+    if r := re.search(r"^\[\s*label\s*=\s*(.+)\s*]", orig_tag):
+        return [0x01, r.group(0), r.group(1)]                # this was for some reason 0x01, so special case it is
+    for h, pair in enumerate(reg_cache.items(), start=0x80):
         tag = pair[0]
         groups = pair[1]
+        # r = re.search(tag, orig_tag)                      # uncomment this and delete the bottom one if you care
+        # if r:                                             # about this script being compatible with python < 3.8
         if r := re.search(tag, orig_tag):
             m_groups = [h]
             m_groups.extend([r.group(o) for o in groups])
             return m_groups
-
-    if r := re.search(r"^\[\s*label\s*=\s*(.+)\s*]", orig_tag):  # this was for some reason 0x01, so special case it is
-        return [0x01, r.group(0), r.group(1)]
     return [0x00]
 
 
 if len(sys.argv) < 3:
-    print("Usage: definition.txt list.txt output.txt")
-    exit(-1)
+    print("For CLI usage: definition.txt list.txt output.txt")
+    defines = input('Insert the name of the definitions file: ')
+    listfile = input('Insert the name of the list file: ')
+    outputfile = input('Insert the name of the output file: ')
+else:
+    defines = sys.argv[1]
+    listfile = sys.argv[2]
+    outputfile = sys.argv[3]
 
 bin_data = []
 num_used = {}
@@ -431,8 +442,8 @@ definition = {}
 org_content = 0
 
 try:
-    define(sys.argv[1])
-    convert(sys.argv[2])
-    create(sys.argv[3])
+    define(defines)
+    convert(listfile)
+    create(outputfile)
 except DefineError or ConvertError as err:
     print(str(err))
