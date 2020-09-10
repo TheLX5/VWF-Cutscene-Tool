@@ -1,6 +1,7 @@
-import sys
 import re
+import argparse
 from contextlib import suppress
+
 
 reg_cache = {
     re.compile(r"^\[\s*end\s*=\s*([0-9A-Fa-f]+|exit|s?goal)\s*]"): [0, 1],
@@ -195,9 +196,7 @@ def convert_txt(msg_number, msg_path):
                     data_2.append(command[1])
 
                 if command[0] == 0x01:  # label
-                    labels[command[2]] = len(data) + 1
-                    data_2.append(command[1])
-                    data_2.append(command[2])
+                    labels[command[2]] = len(data)
 
                 elif command[0] == 0x80:  # end
                     space[0] = -1
@@ -267,7 +266,7 @@ def convert_txt(msg_number, msg_path):
                                           number=f'0x{cur_data_1:X} or 0x{cur_data_2:X}')
 
                 elif command[0] == 0x8B:  # music
-                    cur_data = int(command[2])
+                    cur_data = int(command[2], 16)
                     if cur_data < 0x100:
                         data.append(cur_data)
                     else:
@@ -339,10 +338,11 @@ def convert_txt(msg_number, msg_path):
                                           number=nums)
                     if pass_ == 0:
                         data.append(0x00)
-                        data_2.append(command[1])
                         for k in range(nums):
                             data.append(0x00)
                             data.append(0x00)
+                            data_2.append(branches[k])
+                            data_2.append(branches[k])
                     else:
                         branch_data = re.search(r"^\[\s*branch2", command[1])
                         if branch_data:
@@ -372,15 +372,13 @@ def convert_txt(msg_number, msg_path):
                     if pass_ == 0:
                         data.append(0x00)
                         data.append(0x00)
-                        data_2.append(command[1])
+                        data_2.append(command[2])
                         data_2.append(command[2])
                     else:
                         try:
                             jump_data = labels[command[2]]
                             data.append(jump_data & 0xFF)
                             data.append(jump_data >> 8)
-                            data_2.append(command[1])
-                            data_2.append(command[2])
                         except KeyError:
                             raise parse_error('Label not defined error',
                                               msg="The label in [jump=*] not defined yet.",
@@ -390,15 +388,13 @@ def convert_txt(msg_number, msg_path):
                     if pass_ == 0:
                         data.append(0x00)
                         data.append(0x00)
-                        data_2.append(command[1])
+                        data_2.append(command[2])
                         data_2.append(command[2])
                     else:
                         try:
                             skip_data = labels[command[2]]
                             data.append(skip_data & 0xFF)
                             data.append(skip_data >> 8)
-                            data_2.append(command[1])
-                            data_2.append(command[2])
                         except KeyError:
                             raise parse_error('Label not defined error',
                                               msg="The label in [skip=*] not defined yet.",
@@ -409,11 +405,12 @@ def convert_txt(msg_number, msg_path):
     bin_data.append(data)
     print(f"'{msg_path}' conversion finished. Total size: 0x{len(data) + 1:02X} bytes")
 
-    with open("parsed.txt", "w") as f:
-        for x in range(len(data)):
-            index = f"{x:04X}"
-            data_ = f"{int(data[x]):02X}"
-            f.write(f"${index}: (0x{data_}) {data_2[x]}\n")
+    if debug:
+        with open(f"parsed_{msg_number}.txt", "w") as f:
+            for x in range(len(data)):
+                index = f"{x:04X}"
+                data_ = f"{int(data[x]):02X}"
+                f.write(f"${index}: (0x{data_}) {data_2[x]}\n")
 
 
 def create(output_path):
@@ -484,16 +481,16 @@ def get_tag(orig_tag):
     return [0x00]
 
 
-if len(sys.argv) < 3:
-    print("For CLI usage: definition.txt list.txt output.txt")
-    defines = input('Insert the name of the definitions file: ')
-    listfile = input('Insert the name of the list file: ')
-    outputfile = input('Insert the name of the output file: ')
-else:
-    defines = sys.argv[1]
-    listfile = sys.argv[2]
-    outputfile = sys.argv[3]
+parser = argparse.ArgumentParser()
+parser.add_argument("defines", help="File that contains the defines used to convert the scripts")
+parser.add_argument("list", help="The list file containing the list of scripts you're converting")
+parser.add_argument("output", help="The output file")
+parser.add_argument("-d", "--debug", help="Produces debug files", action='store_true')
 
+args = parser.parse_args()
+debug = args.debug
+if debug:
+    print('Debug mode on')
 bin_data = []
 num_used = {}
 cur_num = 0
@@ -501,8 +498,8 @@ definition = {}
 org_content = 0
 
 try:
-    define(defines)
-    convert(listfile)
-    create(outputfile)
+    define(args.defines)
+    convert(args.list)
+    create(args.output)
 except BaseVWFException as err:
     print(str(err))
