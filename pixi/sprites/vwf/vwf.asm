@@ -1,9 +1,14 @@
+;##################################################################################################
+;# Variable Width Font Cutscene v1.0
+;# by Romi, updated by lx5
+;#
+;# Proper documentation later.
+
 incsrc "vwf_defines.asm"
 
 print "INIT ",pc
 VWFInitCode_wrapper:
 if !sa1
-	lda $3fdead
 	LDA.B #VWFInitCode
 	STA $0183
 	LDA.B #VWFInitCode/256
@@ -99,7 +104,6 @@ print "MAIN ",pc
 
 VWFMainCode_wrapper:
 if !sa1
-	lda $3fdead
 	LDA.B #VWFMainCode
 	STA $0183
 	LDA.B #VWFMainCode/256
@@ -116,7 +120,6 @@ if !sa1
 endif
 
 VWFMainCode:
-	lda $3fdead
 	PHX
 	PHB
 	SEI
@@ -261,7 +264,7 @@ VWFMainCode:
 	BEQ -
 	STZ $10
 	
-	JSL !amk_new_main			; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 	LDA #$81
 	STA $004200
 	LDA $0D9F
@@ -415,7 +418,7 @@ endif
 	LDA $0D9F						; Enable HDMA
 	STA $01,x
 	
-	JSL !amk_new_main				; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 
 	JMP .Loop						; Gameloop
 
@@ -760,7 +763,7 @@ endif
 	STA.w !VWF_SCROLL+$22
 .return
 
-	JSL !amk_new_main			; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 	RTS
 
 ;################################################
@@ -810,7 +813,7 @@ TopicFadeOut:
 	BEQ .wait_vblank
 	STZ $10
 	
-	JSL !amk_new_main			; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 
 	BRA .loop
 
@@ -869,7 +872,7 @@ TopicFadeIn:
 	BEQ .wait_vblank
 	STZ $10
 	
-	JSL !amk_new_main			; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 
 	BRA .loop
 	
@@ -975,7 +978,7 @@ endif
 	INY
 	JSR TopicFadeIn
 	
-	JSL !amk_new_main			; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 	
 	RTS
 
@@ -1001,7 +1004,7 @@ TopFadeOut:
 	BEQ .wait_vblank
 	STZ $10
 	
-	JSL !amk_new_main			; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 
 	BRA .loop
 
@@ -1036,7 +1039,7 @@ TopFadeIn:
 	BEQ .wait_vblank
 	STZ $10
 
-	JSL !amk_new_main			; Call AMK's main code
+	JSR RunAddMusicK			; Call AMK's main code
 
 	BRA .loop
 
@@ -1194,7 +1197,6 @@ BranchLabel:
 	TAY
 	LDA [$D5],y
 	TAY
-	DEY
 	STZ.w !SelectMsg
 	LDA $06
 	BMI .return
@@ -1348,3 +1350,30 @@ Letters:
 	incbin "vwf.bin"
 FontWidth:
 	incbin "width.bin"
+
+;##################################################################################################
+;# Handles AddMusicK
+
+RunAddMusicK:
+	PHP
+	REP #$20
+
+	LDA.w #$8076				; read3($008076)
+	STA $00
+	LDA.w #$0080
+	STA $01
+
+	LDA [$00]					; read3(read3($008076)+$03)
+	CLC
+	ADC #$000A
+	STA $03
+	INC $00
+	INC $00
+	LDA [$00]
+	STA $05
+
+	PHK
+	PER $0002
+	JML [$0003|!dp]
+	PLP 
+	RTS
