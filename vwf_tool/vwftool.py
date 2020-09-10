@@ -400,7 +400,7 @@ def convert_txt(msg_number, msg_path):
                                               msg="The label in [skip=*] not defined yet.",
                                               label=command[2])
 
-    cur_num = cur_num + 1
+    cur_num += 1
     num_used[msg_number] = cur_num
     bin_data.append(data)
     print(f"'{msg_path}' conversion finished. Total size: 0x{len(data) + 1:02X} bytes")
@@ -417,23 +417,24 @@ def create(output_path):
     global num_used, bin_data
     print("Creating txt...")
     with open(output_path, "w") as f:
-        vwf_data = ""
-        ptr = "DataPtr:"
+        data_offsets = [0]
+        total_bin_data = []
+        w = 0
+        for data in bin_data:
+            data_offsets.append(len(data)+data_offsets[w])
+            w += 1
+            total_bin_data.extend(data)
+        data_offsets.pop()
+        with open('vwf_data.bin', 'wb') as b:
+            b.write(bytes(total_bin_data))
+        ptr = 'BinPtr:\n\tincbin "vwf_data.bin"\nDataPtr:'
         for i in range(len(num_used.keys())):
             if (i & 15) == 0:
-                ptr += "\n\t\t\tdw"
+                ptr += '\n\tdw'
             else:
                 ptr += ", "
             with suppress(Exception):
-                get_num = num_used[f"{i:02d}"] - 1
-                ptr = ptr + f" .{i:02X}"
-                vwf_data = f'{vwf_data}\n.{i:02X}'
-                for j in range(len(bin_data[get_num])):
-                    if (j & 0x1F) == 0:
-                        vwf_data = f'{vwf_data}\n\t\t\tdb ${(bin_data[get_num][j] & 0xFF):02X}'
-                    else:
-                        vwf_data = f'{vwf_data},${(bin_data[get_num][j] & 0xFF):02X}'
-                del num_used[f"{i:02d}"]
+                ptr += f' BinPtr+${data_offsets[i]:X}'
 
         code = """
 incsrc "vwf_defines.asm"
@@ -463,7 +464,7 @@ print "MAIN ",pc
 
 """
 
-        f.write(f'{code}\n{ptr}\n{vwf_data}')
+        f.write(f'{code}\n{ptr}')
 
 
 def get_tag(orig_tag):
