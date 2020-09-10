@@ -9,7 +9,6 @@ incsrc "vwf_defines.asm"
 print "INIT ",pc
 VWFInitCode_wrapper:
 if !sa1
-	lda $3fdead
 	LDA.B #VWFInitCode
 	STA $0183
 	LDA.B #VWFInitCode/256
@@ -122,7 +121,6 @@ if !sa1
 endif
 
 VWFMainCode:
-	lda $3fdead
 	PHX
 	PHB
 	SEI
@@ -1200,7 +1198,6 @@ BranchLabel:
 	TAY
 	LDA [$D5],y
 	TAY
-	DEY
 	STZ.w !SelectMsg
 	LDA $06
 	BMI .return
