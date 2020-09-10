@@ -2,7 +2,6 @@ import sys
 import re
 from contextlib import suppress
 
-
 reg_cache = {
     re.compile(r"^\[\s*end\s*=\s*([0-9A-Fa-f]+|exit|s?goal)\s*]"): [0, 1],
     re.compile(r"^\[ ]"): [0],
@@ -27,12 +26,18 @@ reg_cache = {
 }
 
 
-class DefineError(Exception):
-    pass
+class BaseVWFException(Exception):
+    def __init__(self, errortype, *, message, **kwargs):
+        self.message = message
+        self.errortype = errortype
+        self.others = kwargs
 
+    def __repr__(self):
+        return f'{self.errortype}\n{self.message}\n' + \
+               '\n'.join([f'{v.capitalize()}: {k}' for v, k in self.others.items()])
 
-class ConvertError(Exception):
-    pass
+    def __str__(self):
+        return self.__repr__()
 
 
 def define(definitions):
@@ -41,12 +46,12 @@ def define(definitions):
         with open(def_path, "r") as f:
             content = f.read()
     except Exception as e:
-        raise DefineError(f"Couldn't open{def_path} for reading. Cause: {str(e)}")
+        raise BaseVWFException('File reading error', message=f'Couldn\'t open {def_path}.', cause=str(e))
 
     content = re.sub(r"\s+", r"", content)
 
     i = 0
-    while i < 0x51:
+    while content and i <= 0x7F:
         tag = re.search(r"^(\[[^\[\]]+?])", content)
         tag2 = re.search(r"^([^\[\]])", content)
         if tag:
@@ -54,7 +59,10 @@ def define(definitions):
             current_def = tag.group()
             result = get_tag(current_def)
             if current_def in result:
-                raise DefineError(f"Your tag: {str(current_def)} is duplicated with the reserved tag.")
+                raise BaseVWFException('Tag defining error',
+                                       message=f"{str(current_def)} is a duplicate of a reserved tag",
+                                       tag=result[result.index(current_def)],
+                                       near=f"tag number 0x{(i - 1):02X}" if i > 0 else "the start of the file")
             else:
                 definition[current_def] = i
         elif tag2:
@@ -62,8 +70,15 @@ def define(definitions):
             current_def = tag2.group()
             definition[current_def] = i
         else:
-            raise DefineError("Invalid tag")
-
+            invalid_tag = content[:2]
+            if invalid_tag == '[]':
+                message = 'Tag is empty'
+            elif invalid_tag[0] == '[':
+                invalid_tag += '\u2026'
+                message = 'Tag is unclosed'
+            else:
+                raise BaseVWFException('Tag defining error', message='Invalid tag')
+            raise BaseVWFException('Tag defining error', message=message, tag=invalid_tag.replace('\n', ''))
         i += 1
 
     print("Finished defining\n")
@@ -74,7 +89,7 @@ def convert(convert_path):
         with open(convert_path, "r") as f:
             content = f.readlines()
     except Exception as e:
-        raise ConvertError(f"couldn't open{convert_path} for reading. Cause: {str(e)}")
+        raise BaseVWFException('File reading error', message=f'Couldn\'t open {convert_path}.', cause=str(e))
 
     for x in range(len(content)):
         line = content[x]
@@ -83,11 +98,8 @@ def convert(convert_path):
         if line is None:
             continue
         current_file = re.search(r"^([0-9A-Fa-f]+)\s+(.+)$", line_)
-        if current_file.group():
-            try:
-                convert_txt(current_file.group(1), current_file.group(2))
-            except ConvertError as e:
-                print(f"Couldn't convert file {current_file.group()}. Reason: {str(e)}")
+        if current_file and current_file.group():
+            convert_txt(current_file.group(1), current_file.group(2))
         else:
             print(f"Line {str(x)}: Invalid information, {line_}")
 
@@ -96,16 +108,16 @@ def convert_txt(msg_number, msg_path):
     try:
         msg_num = int(msg_number, 16)
     except ValueError:
-        raise ConvertError(f"{msg_number} isn't a valid number!")
+        raise BaseVWFException('Conversion error', message=f"{msg_number} isn't a valid number!")
 
     if msg_num >= 0x100:
-        raise ConvertError(f"The specified number is too high: {str(msg_number)}")
+        raise BaseVWFException('Conversion error', message=f"The specified number is too high: 0x{msg_num:X}")
 
     try:
         with open("msg/" + msg_path, "r") as f:
             content = f.read()
     except Exception as e:
-        raise ConvertError(f"Couldn't open {msg_path} for reading. Cause: {str(e)}")
+        raise BaseVWFException('File reading error', message=f'Couldn\'t open {msg_path}.', cause=str(e))
 
     content = re.sub(r"//.*", r"", content)  # comments
     content = re.sub(r"^\s+|\s+$", r"", content)  # leading or ending spaces
@@ -123,6 +135,21 @@ def convert_txt(msg_number, msg_path):
         topic = 0
         content = original_content
         p = 0
+
+        def parse_error(errortype, *, msg, **kwargs):
+            current_pos = original_content.rindex(content)
+            line = 1
+            pos = 0
+            while original_content.index('\n', pos) >= 0:
+                pos = original_content.index('\n', pos)
+                if pos >= current_pos:
+                    break
+                pos += 1
+                line += 1
+            return BaseVWFException(errortype, message=msg, **kwargs, line=line,
+                                    near="\"" + content[:10].replace("\n", " ") + "\u2026\""
+                                    if content else "end of file")
+
         while content:
             parse_tag = re.search(r"^(\[[^\[\]]+?])", content)
             parse_space = re.search(r"^\s+", content)
@@ -141,8 +168,15 @@ def convert_txt(msg_number, msg_path):
                 string = parse_tag2.group()
                 p += 1
             else:
-                raise ConvertError("Invalid tag found. It may be the tag is unclosed or it contains nothing")
-
+                invalid_tag = content[:2]
+                if invalid_tag == '[]':
+                    message = 'Tag is empty'
+                elif invalid_tag[0] == '[':
+                    invalid_tag += '\u2026'
+                    message = 'Tag is unclosed'
+                else:
+                    raise parse_error('Conversion error', msg='Invalid tag')
+                raise parse_error('Conversion error', msg=message, tag=invalid_tag.replace('\n', ''))
             get_def = definition.get(string)
             j = 1 if get_def is not None else 0
             command = get_tag(string)
@@ -182,7 +216,9 @@ def convert_txt(msg_number, msg_path):
                         if cur_data < 0x20:
                             data.append(cur_data)
                         else:
-                            raise ConvertError("The specified number in [end=*] is too high.")
+                            raise parse_error('Out of range error',
+                                              msg="The specified number in [end=*] is too high.",
+                                              number=f'0x{cur_data:X}')
 
                 elif command[0] == 0x82:  # line break
                     space[0] = -1
@@ -193,7 +229,9 @@ def convert_txt(msg_number, msg_path):
                         data.append(cur_data)
                         data_2.append(command[2])
                     else:
-                        raise ConvertError("The specified number in [wait=*] is too high.")
+                        raise parse_error('Out of range error',
+                                          msg="The specified number in [wait=*] is too high.",
+                                          number=f'0x{cur_data:X}')
 
                 elif command[0] == 0x88:  # pad left
                     cur_data = int(command[2])
@@ -201,7 +239,9 @@ def convert_txt(msg_number, msg_path):
                         data.append(cur_data)
                         data_2.append(command[2])
                     else:
-                        raise ConvertError("The specified number in [pad left=*] is too high.")
+                        raise parse_error('Out of range error',
+                                          msg="The specified number in [pad left=*] is too high.",
+                                          number=f'0x{cur_data:X}')
 
                 elif command[0] == 0x89:  # pad right
                     cur_data = int(command[2])
@@ -209,7 +249,9 @@ def convert_txt(msg_number, msg_path):
                         data.append(cur_data)
                         data_2.append(command[2])
                     else:
-                        raise ConvertError("The specified number in [pad right=*] is too high.")
+                        raise parse_error('Out of range error',
+                                          msg="The specified number in [pad right=*] is too high.",
+                                          number=f'0x{cur_data:X}')
 
                 elif command[0] == 0x8A:  # pad
                     cur_data_1 = int(command[2])
@@ -220,14 +262,18 @@ def convert_txt(msg_number, msg_path):
                         data.append(cur_data_1)
                         data.append(cur_data_2)
                     else:
-                        raise ConvertError("The specified number in [pad=*,*] is too high.")
+                        raise parse_error('Out of range error',
+                                          msg="One of the numbers in [pad=*,*] is too high.",
+                                          number=f'0x{cur_data_1:X} or 0x{cur_data_2:X}')
 
                 elif command[0] == 0x8B:  # music
                     cur_data = int(command[2])
                     if cur_data < 0x100:
                         data.append(cur_data)
                     else:
-                        raise ConvertError("The specified number in [music=*] is too high.")
+                        raise parse_error('Out of range error',
+                                          msg="The specified number in [music=*] is too high.",
+                                          number=f'0x{cur_data:X}')
 
                 elif command[0] == 0x8C:  # erase
                     space[0] = -1
@@ -243,7 +289,9 @@ def convert_txt(msg_number, msg_path):
                     loop = int(command[2])
                     data_2.append(command[2])
                     if loop == 0 or loop >= 0x7F:
-                        raise ConvertError("The specified number in [sprite=*] is not in the range 1-7F.")
+                        raise parse_error('Out of range error',
+                                          msg="The specified number in [sprite=*] is not in the range 1-7F.",
+                                          number=f'0x{loop:X}')
                     data.append(loop)
                     sprite_data = re.search(r"^\s*((?:.|\s)*?)\s*\[\s*/sprite\s*]", content)
                     content = re.sub(r"^\s*((?:.|\s)*?)\s*\[\s*/sprite\s*]", r"", content)
@@ -271,19 +319,24 @@ def convert_txt(msg_number, msg_path):
                                 data_2.append(sprite_tile.group(4) + " " + sprite_tile.group(5))
                                 loop = loop - 1
                             else:
-                                raise ConvertError("Invalid attributes in [sprite=*,*][/sprite]")
+                                raise parse_error('Invalid attribute error',
+                                                  msg="Invalid attributes in [sprite=*,*][/sprite]",
+                                                  attribute=sprite_tile)
                         if loop:
-                            raise ConvertError("The number of attributes in [sprite=*,*][/sprite] not matched to "
-                                               "the loop number")
+                            raise parse_error('Conversion error',
+                                              msg="The number of attributes in [sprite=*,*][/sprite] not "
+                                                  "matched to the loop number")
                     else:
-                        raise ConvertError("Unclosed [sprite] tag found.")
+                        raise parse_error('Unclosed tag error', msg="Unclosed [sprite] tag found.")
                 elif command[0] == 0x90:
                     space[0] = -1
                     branches = command[2].split(",")
                     data_2.append(command[2])
                     nums = len(branches)
                     if nums < 2 or 5 < nums:
-                        raise ConvertError("The number of labels in [branch=*] is either too high or too small.")
+                        raise parse_error('Out of range error',
+                                          msg="The number of labels in [branch=*] is not in range 2-5.",
+                                          number=nums)
                     if pass_ == 0:
                         data.append(0x00)
                         data_2.append(command[1])
@@ -301,14 +354,18 @@ def convert_txt(msg_number, msg_path):
                             if branch_data:
                                 pass
                             else:
-                                raise ConvertError("The empty label is specified in [branch=*].")
+                                raise parse_error('Empty label specified error',
+                                                  msg="The empty label is specified in [branch=*].",
+                                                  branch=command[1])
 
                             try:
                                 branch_data_ = labels[branches[x]]
                                 data.append(branch_data_ & 0xFF)
                                 data.append(branch_data_ >> 8)
                             except KeyError:
-                                raise ConvertError("The label in [branch=*] not defined yet.")
+                                raise parse_error('Label not defined error',
+                                                  msg="The label in [branch=*] not defined yet.",
+                                                  label=branches[x])
 
                 elif command[0] == 0x91:  # jump
                     space[0] = -1
@@ -325,7 +382,9 @@ def convert_txt(msg_number, msg_path):
                             data_2.append(command[1])
                             data_2.append(command[2])
                         except KeyError:
-                            raise ConvertError("The label in [jump=*] not defined yet.")
+                            raise parse_error('Label not defined error',
+                                              msg="The label in [jump=*] not defined yet.",
+                                              label=command[2])
 
                 elif command[0] == 0x92:  # skip
                     if pass_ == 0:
@@ -341,7 +400,9 @@ def convert_txt(msg_number, msg_path):
                             data_2.append(command[1])
                             data_2.append(command[2])
                         except KeyError:
-                            raise ConvertError("The label in [skip=*] not defined yet.")
+                            raise parse_error('Label not defined error',
+                                              msg="The label in [skip=*] not defined yet.",
+                                              label=command[2])
 
     cur_num = cur_num + 1
     num_used[msg_number] = cur_num
@@ -409,16 +470,14 @@ print "MAIN ",pc
 
 
 def get_tag(orig_tag):
-    # r = re.search(r"^\[\s*label\s*=\s*(.+)\s*]", orig_tag) # uncomment this and delete the bottom one if you
-    # if r:                                                  # care about this script being compatible with python < 3.8
-    if r := re.search(r"^\[\s*label\s*=\s*(.+)\s*]", orig_tag):
-        return [0x01, r.group(0), r.group(1)]                # this was for some reason 0x01, so special case it is
+    r = re.search(r"^\[\s*label\s*=\s*(.+)\s*]", orig_tag)
+    if r:
+        return [0x01, r.group(0), r.group(1)]  # this was for some reason 0x01, so special case it is
     for h, pair in enumerate(reg_cache.items(), start=0x80):
         tag = pair[0]
         groups = pair[1]
-        # r = re.search(tag, orig_tag)                      # uncomment this and delete the bottom one if you care
-        # if r:                                             # about this script being compatible with python < 3.8
-        if r := re.search(tag, orig_tag):
+        r = re.search(tag, orig_tag)
+        if r:
             m_groups = [h]
             m_groups.extend([r.group(o) for o in groups])
             return m_groups
@@ -445,5 +504,5 @@ try:
     define(defines)
     convert(listfile)
     create(outputfile)
-except DefineError or ConvertError as err:
+except BaseVWFException as err:
     print(str(err))
