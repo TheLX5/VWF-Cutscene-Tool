@@ -11,8 +11,4 @@ Better readme later.
 * (Optional) SA-1 Pack 1.32
 
 ### Usage
-The original usage in Lunar Magic is still valid, you can read the original docs.
-
-To convert scripts, you must need to use Python 3 with the following arguments:
-
-`python3 vwftool.py def.txt <list of texts> <output file>`
+Please refer to the [wiki](https://github.com/TheLX5/VWF-Cutscene-Tool/wiki) for explanation about the usage of this tool.
