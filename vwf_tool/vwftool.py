@@ -1,6 +1,7 @@
 import re
 import argparse
 from contextlib import suppress
+import json
 
 
 reg_cache = {
@@ -421,7 +422,7 @@ def create(output_path):
         total_bin_data = []
         w = 0
         for data in bin_data:
-            data_offsets.append(len(data)+data_offsets[w])
+            data_offsets.append(len(data) + data_offsets[w])
             w += 1
             total_bin_data.extend(data)
         data_offsets.pop()
@@ -482,6 +483,99 @@ def get_tag(orig_tag):
     return [0x00]
 
 
+def generate_json(outputfile: str):
+    json_filename = outputfile[:outputfile.rindex('.')] + '.json'
+    json_boilerplate = {
+        "$1656": {
+            "Object Clipping": 0,
+            "Can be jumped on": False,
+            "Dies when jumped on": False,
+            "Hop in/kick shell": False,
+            "Disappears in cloud of smoke": False
+        },
+        "$1662": {
+            "Sprite Clipping": 0,
+            "Use shell as death frame": False,
+            "Fall straight down when killed": False
+        },
+        "$166E": {
+            "Use second graphics page": False,
+            "Palette": 0,
+            "Disable fireball killing": True,
+            "Disable cape killing": True,
+            "Disable water splash": False,
+            "Don't interact with Layer 2": False
+        },
+        "$167A": {
+            "Don't disable cliping when starkilled": True,
+            "Invincible to star/cape/fire/bounce blk.": True,
+            "Process when off screen": True,
+            "Don't change into shell when stunned": False,
+            "Can't be kicked like shell": False,
+            "Process interaction with Mario every frame": True,
+            "Gives power-up when eaten by yoshi": False,
+            "Don't use default interaction with Mario": True
+        },
+        "$1686": {
+            "Inedible": True,
+            "Stay in Yoshi's mouth": False,
+            "Weird ground behaviour": False,
+            "Don't interact with other sprites": True,
+            "Don't change direction if touched": True,
+            "Don't turn into coin when goal passed": True,
+            "Spawn a new sprite": False,
+            "Don't interact with objects": True
+        },
+        "$190F": {
+            "Make platform passable from below": False,
+            "Don't erase when goal passed": True,
+            "Can't be killed by sliding": True,
+            "Takes 5 fireballs to kill": False,
+            "Can be jumped on with upwards Y speed": False,
+            "Death frame two tiles high": True,
+            "Don't turn into a coin with silver POW": True,
+            "Don't get stuck in walls (carryable sprites)": False
+        },
+        "AsmFile": outputfile,
+        "ActLike": 54,
+        "Type": 1,
+        "Extra Property Byte 1": 0,
+        "Extra Property Byte 2": 0,
+        "Additional Byte Count (extra bit clear)": 0,
+        "Additional Byte Count (extra bit set)": 0,
+        "Map16": "",
+        "Displays": [
+            {
+                "Description": "Loads VWF Cutscene Message Based on X, Y position",
+                "ExtraBit": False,
+                "Tiles": [
+                    {
+                        "X offset": 0,
+                        "Y offset": 0,
+                        "map16 tile": 267
+                    }
+                ],
+                "X": 0,
+                "Y": 0,
+                "DisplayText": "",
+                "UseText": False
+            }
+        ],
+        "Collection": [
+            {
+                "Name": json_filename.replace('.json', '').replace('_', ' '),
+                "ExtraBit": False,
+                "Extra Property Byte 1": 0,
+                "Extra Property Byte 2": 0,
+                "Extra Property Byte 3": 0,
+                "Extra Property Byte 4": 0
+            }
+        ]
+    }
+    with open(json_filename, 'w') as j:
+        j.write(json.dumps(json_boilerplate, indent=4))
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("defines", help="File that contains the defines used to convert the scripts")
 parser.add_argument("list", help="The list file containing the list of scripts you're converting")
@@ -501,6 +595,11 @@ org_content = 0
 try:
     define(args.defines)
     convert(args.list)
-    create(args.output)
+    if args.output.find('.') != -1:
+        output = args.output[:args.output.rindex('.')] + '.asm'     # if output file is "*.xxx", replace with '*.asm'
+    else:
+        output = args.output + '.asm'                               # if output file doesn't have extension, add '.asm'
+    create(output)
+    generate_json(output)
 except BaseVWFException as err:
     print(str(err))
