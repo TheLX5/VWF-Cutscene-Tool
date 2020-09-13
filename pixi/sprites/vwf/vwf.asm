@@ -236,6 +236,14 @@ VWFMainCode:
 	STA.w !SkipPos
 	STZ.w !Skipped
 
+	LDA #$0004
+	STA.w !SpaceWidth
+
+	STZ.w !ASMPointer
+	STZ.w !SavedPointer
+	STZ.w !OffsetPointer
+	STZ.w !NewPointer
+
 	LDA.w #$0100
 	STA.w !VWF_SCROLL+$00
 	STA.w !VWF_SCROLL+$10
@@ -264,7 +272,8 @@ VWFMainCode:
 	BEQ -
 	STZ $10
 	
-	JSR RunAddMusicK			; Call AMK's main code
+	JSR RunGlobal	    		; Run global code
+
 	LDA #$81
 	STA $004200
 	LDA $0D9F
@@ -377,22 +386,22 @@ VWFMainCode:
 
 
 .WaitVblank
-	LDA $10							; Wait for V-Blank
+	LDA $10						; Wait for V-Blank
 	BEQ .WaitVblank
 	STZ $10
 
-	INC $13							; Increase frame counter
+	INC $13						; Increase frame counter
 
 	LDA #$00
-	STA $00420C						; Disable HDMA
+	STA $00420C					; Disable HDMA
 	LDA #$80
-	STA $002100						; Force blank and turn screen to black
-	STA $002115						; Enable VRAM increment
+	STA $002100					; Force blank and turn screen to black
+	STA $002115					; Enable VRAM increment
 
 if !sa1 == 1
-	LDX #$120B						; Optimization for DMA upload
+	LDX #$120B					; Optimization for DMA upload
 else
-	LDX #$420B						; Optimization for DMA upload
+	LDX #$420B					; Optimization for DMA upload
 endif
 	REP #$20
 	LDA.w !CurrentLine
@@ -400,833 +409,148 @@ endif
 	BCC +
 	SBC #$0E00
 +
-	AND #$0E00						; Calculate VRAM address
+	AND #$0E00					; Calculate VRAM address
 	ORA #$2000
 	STA $002116
 
-	LDA #$1801						; DMA setting = $01
-	STA $F5,x						; DMA destination = VRAM Write
+	LDA #$1801					; DMA setting = $01
+	STA $F5,x					; DMA destination = VRAM Write
 	LDA.w #!VWF_GFX
 	STA $F7,x
 	LDA.w #!VWF_GFX>>8
 	STA $F8,x
-	LDA #$0400						; Transfer 0x400 bytes (whole tilemap)
+	LDA #$0400					; Transfer 0x400 bytes (whole tilemap)
 	STA $FA,x
 	SEP #$20
-	LDA #$01						; Enable DMA transfer
+	LDA #$01					; Enable DMA transfer
 	STA $00,x
-	LDA $0D9F						; Enable HDMA
+	LDA $0D9F					; Enable HDMA
 	STA $01,x
 	
-	JSR RunAddMusicK			; Call AMK's main code
+	JSR RunGlobal				; Call global code
 
-	JMP .Loop						; Gameloop
+	JMP .Loop					; Gameloop
 
 CommandAddress:
-	dw FinishVWF-1		; 80
-	dw PutSpace-1		; 81
-	dw BreakLine-1		; 82
-	dw WaitButton-1		; 83
-	dw WaitTime-1		; 84
-	dw FontColor1-1		; 85
-	dw FontColor2-1		; 86
-	dw FontColor3-1		; 87
-	dw PadLeft-1		; 88
-	dw PadRight-1		; 89
-	dw PadBoth-1		; 8A
-	dw ChangeMusic-1	; 8B
-	dw EraseSentence-1	; 8C
-	dw ChangeTopic-1	; 8D
-	dw ShowOAM-1		; 8E
-	dw HideOAM-1		; 8F
-	dw BranchLabel-1	; 90
-	dw JumpLabel-1		; 91
-	dw SkipLabel-1		; 92
+	dw FinishVWF-1				; 80
+	dw PutSpace-1				; 81
+	dw BreakLine-1				; 82
+	dw WaitButton-1				; 83
+	dw WaitTime-1				; 84
+	dw FontColor1-1				; 85
+	dw FontColor2-1				; 86
+	dw FontColor3-1				; 87
+	dw PadLeft-1				; 88
+	dw PadRight-1				; 89
+	dw PadBoth-1				; 8A
+	dw ChangeMusic-1			; 8B
+	dw EraseSentence-1			; 8C
+	dw ChangeTopic-1			; 8D
+	dw ShowOAM-1				; 8E
+	dw HideOAM-1				; 8F
+	dw BranchLabel-1			; 90
+	dw JumpLabel-1				; 91
+	dw SkipLabel-1				; 92
+	
+	dw ChangeMusicNoSamples-1	; 93
+	dw ChangeSpaceChar-1		; 94
+	dw ChangeSwitchOn-1			; 95
+	dw ChangeSwitchOff-1		; 96
+	dw ToggleOnOffSwitch-1		; 97
+	dw Compare-1				; 98
+	dw PlaySFX1DF9-1			; 99
+	dw PlaySFX1DFC-1			; 9A
+	dw DisplayRAM-1				; 9B
+	dw ChangeRAM-1				; 9C
+	dw ExAniManual-1			; 9D
+	dw ExAniCustom-1			; 9E
+	dw ExAniOneShot-1			; 9F
+	dw SetConditionalDM16-1		; A0
+	dw ClearConditionalDM16-1	; A1
+	dw GiveCoins-1				; A2
+	dw StealCoins-1				; A3
+	dw GiveYoshiCoins-1			; A4
+	dw StealYoshiCoins-1		; A5
+	dw GiveLives-1				; A6
+	dw StealLives-1				; A7
+	dw GiveBonusStars-1			; A8
+	dw StealBonusStars-1		; A9
+	dw SetPowerup-1				; AA
+	dw SetItemBox-1				; AB
+	dw SetYoshi-1				; AC
+	dw SetMidpoint-1			; AD
+	dw CheckMidpoint-1			; AE
+	dw CheckEvent-1				; AF
+	dw CheckNumEvents-1			; B0
+	dw Check1upCheckpoints-1	; B1
+	dw Check3upMoon-1			; B2
+	dw CheckYoshiCoin-1			; B3
+	dw CheckSwitchPalace-1		; B4
+	dw TurnOnEcho-1				; B5
+	dw TurnOffEcho-1			; B6
+	dw ExecuteASM-1				; B7
+	dw ExecuteASMEveryFrame-1	; B8
+	dw StopASMEveryFrame-1		; B9
 
 
 ;##################################################################################################
-;# Every command available
+;# Handles code after VWF code
 
-;################################################
-;# Command $80
-;# Finish VWF dialogue
-
-FinishVWF:
-	SEP #$20
-
-.clear_data
-	LDX #$004F
-..loop
-	LDA.w !VWF_HDMA,x				; Fade to black everything
-	BEQ ..skip
-	DEC.w !VWF_HDMA,x
-..skip
-	DEX
-	BPL ..loop
-
-	LDA.w !VWF_HDMA+$30
-	REP #$20
-	BNE PutSpace_return
-	INY
-	LDA [$D5],y						; Load VWF ending sequence
-	PLX
-	SEP #$30
-	PLB								; Return DB to normal
-	PLX
-	STA $F0
-	CMP #$20
-	BCS .no_teleport
-
-.teleport
-	TAY								; < $20: Teleport using screen exits
-	LDA $19B8|!addr,y
-	STA $19B8|!addr
-	LDA $19D8|!addr,y
-	STA $19D8|!addr
-	LDA #$05
-	STA $71
-	RTL
-
-.no_teleport
-	CMP #$20
-	BNE .end_level
-	JML $05B160						; != $20: Side exit
-
-.end_level							; == $20: End level
-	SBC #$20
-	STA $13CE|!addr
-	STA $0DD5|!addr
-	INC $1DE9|!addr
-	LDA #$0B
-	STA $0100|!addr
-	RTL
-
-;################################################
-;# Command $81
-;# Put a 4px width space
-
-PutSpace:	
-	LDA.w !Xposition
-	CLC
-	ADC #$0004
-	STA.w !Xposition
-	INY
-.return
-	RTS
-
-;################################################
-;# Command $82
-;# (Forced) Line break
-
-BreakLine:
-	LDA.w !ForcedScroll			; If text is already scrolling, ignore the line break
-	BEQ .no_scrolling
-	CLC
-	RTS
-
-.no_scrolling
-	LDA.w !LineDrawn			; Check lines drawn on screen, if > 4, scroll text
-	CMP #$0004
-	BCC +
-	INC.w !ForcedScroll			; Activate scroll flag if needed
-	BRA ++
-+	
-	INC.w !LineDrawn			; Increase lines drawn
-++	
-	LDA.w !CurrentLine
-	CLC
-	ADC #$0200
-	STA.w !CurrentLine
-	LDA.w !NewLeftPad
-	STA.w !LeftPad
-	STA.w !Xposition
-
-.clear_tilemap
-	LDX #$03FE
-..loop
-	STZ.w !VWF_GFX,x
-	DEX #2
-	BPL ..loop
-
-	INC.w !LineBroken			; Activate line break flag
-	LDA.w !Inner
-	BNE .return
-	INY
-	SEC
-.return
-	RTS
-
-;################################################
-;# Command $83
-;# Wait for button to continue text
-
-WaitButton:	
-	LDA.b $15-1					; Check if a button has been pressed or is being pressed
-	BPL .return
-	LDA.b $17-1
-	BPL .INY
-	LDA.b $18-1
-	BPL .return
-
-.INY
-	INY							; Load next VWF byte in the next frame
-
-.Erase
-	LDA #$00F0					; Reset first OAM slot position (arrow GFX)
-	STA $0201
-	RTS
-
-.return
-	LDA $13						; Make the arrow blink
-	AND #$0010
-	BNE .Erase
-	LDA.w !ForcedScroll
-	BNE .Erase
-
-	LDA.w !Xposition
-	STA $0200
-	LDA.w !LineDrawn
-	ASL #4
-	ADC #$0086
-	STA $0201
-	LDA.w #!RightArrowGFX
-	STA $0202
-	RTS
-
-;################################################
-;# Command $84
-;# Waits a few frames before continuing with the text
-
-WaitTime:
-	INY
-	LDA [$D5],y					; Load wait duration from VWF data
-	AND #$00FF
-	CMP.w !Timer				; Check if time is over
-	BEQ .INY
-	INC.w !Timer				; Increase timer
-	DEY							; And reset VWF data index to keep getting into the same routine
-	RTS
-
-.INY
-	STZ.w !Timer				; Done waiting, reset timer and increase VWF data index
-	INY
-	RTS
-
-;################################################
-;# Command $85
-;# Change font color #1
-
-FontColor1:
-	STZ.w !FontColor				; Forces font color to the first option
-	INY
-	RTS
-
-;################################################
-;# Command $86
-;# Change font color #2
-
-FontColor2:						; Forces font color to the second option
-	LDA #$0010
-	STA.w !FontColor
-	INY
-	RTS
-
-;################################################
-;# Command $87
-;# Change font color #3
-
-FontColor3:
-	LDA #$0020					; Forces font color to the third option
-	STA.w !FontColor
-	INY
-	RTS
-
-;################################################
-;# Command $88
-;# Change left padding
-
-PadLeft:
-	INY
-	LDA [$D5],y					; Grab new left padding width
-	AND #$00FF
-	STA.w !NewLeftPad
-	INY
-	RTS
-
-;################################################
-;# Command $89
-;# Change right padding
-
-PadRight:
-	INY
-	LDA [$D5],y					; Grab new right padding width
-	AND #$00FF
-	STA.w !RightPad
-	INY
-	RTS
-
-;################################################
-;# Command $8A
-;# Change both paddings
-
-PadBoth:
-	INY
-	LDA [$D5],y					; Grab new left padding width
-	AND #$00FF
-	STA.w !NewLeftPad
-	BRA PadRight				; and the right one.
-
-;################################################
-;# Command $8B
-;# Change music
-
-ChangeMusic:
-	INY
-	SEP #$20
-	LDA [$D5],y
-	STA $1DFB
-	REP #$20
-	INY
-	RTS
-
-;################################################
-;# Command $8C
-;# EraseSentence
-
-EraseSentence:
-	LDA !ForcedScroll
-	BNE .return
-
-.clear_gfx_buffer
-	LDX #$03FE
-..loop
-	STZ.w !VWF_GFX,x
-	DEX #2
-	BPL ..loop
-	SEP #$20
-
-.loop
-
-.wait_vblank
-	LDA $10						; Wait for V-Blank
-	BEQ .wait_vblank
-	STZ $10
-
-	LDA #$00
-	STA $00420C					; Disable HDMA
-	LDA #$80
-	STA $002100					; Enable F-Blank
-	STA $002115					; VRAM Increment
-
-if !sa1 == 1
-	LDX #$120B						; Optimization for DMA upload
-else
-	LDX #$420B						; Optimization for DMA upload
-endif
-	REP #$21
-	LDA.w !CurrentLine
-	ADC #$0200
-	STA.w !CurrentLine
-	AND #$0E00
-	ORA #$2000
-	STA $002116					; Calculate VRAM Addr
-
-	LDA #$1801					; Write to VRAM
-	STA $F5,x
-	LDA.w #!VWF_GFX
-	STA $F7,x
-	LDA.w #!VWF_GFX>>8
-	STA $F8,x
-	LDA #$0400
-	STA $FA,x
-	SEP #$20
-
-	LDA #$01
-	STA $00,x					; Enable DMA
-	LDA $0D9F
-	STA $01,x					; Enable HDMA
-
-	INC.w !Timer
-	LDA.w !Timer
-	CMP #$08
-	BNE .loop
-	INY
-	
-	REP #$20
-	STZ.w !CurrentLine
-	LDA.w !NewLeftPad
-	STA.w !LeftPad
-	STA.w !Xposition
-	STZ.w !LineDrawn
-	STZ.w !Timer
-	LDA #$FF80
-	STA.w !VWF_SCROLL+$22
-.return
-
-	JSR RunAddMusicK			; Call AMK's main code
-	RTS
-
-;################################################
-;# Not a command
-;# Fades out topic
-
-TopicFadeOut:
-	LDA.w !ForcedScroll
-	BNE .return
-
+RunGlobal:
 	PHY
-	PHP
-	SEP #$30
-.loop
-	LDA.w !VWF_HDMA+$15				; If topic is black, return
-	BEQ .faded_out
-
-
-	LDX.w !Timer
-	LDA #$0B
-	SEC
-	SBC.w !Timer
-	TAY
-..dec_loop
-	LDA.w !VWF_HDMA+$10,x			; Fade out the topic by updating the HDMA table
-	BEQ ..min_brightness
-	DEC.w !VWF_HDMA+$10,x
 	PHX
-	TYX
-	DEC.w !VWF_HDMA+$10,x
-	PLX
-..min_brightness
-
-	INY
-	DEX
-	BPL ..dec_loop
-
-	LDA.w !Timer
-	CMP #$05
-	BCS ..skip
-	INC.w !Timer
-..skip
-
-
-.wait_vblank
-	LDA $10							; Wait for next V-Blank
-	BEQ .wait_vblank
-	STZ $10
-	
-	JSR RunAddMusicK			; Call AMK's main code
-
-	BRA .loop
-
-.faded_out
-	PLP
-	STZ.w !Timer
-	PLY
-
-.return
-	RTS
-
-;################################################
-;# Not a command
-;# Fades in topic
-
-TopicFadeIn:
-	LDA !ForcedScroll
-	BNE .return
-
-	PHY
 	PHP
-	SEP #$30
-	LDA #$04
-	STA.w !Timer
 
-.loop	
-	LDA.w !VWF_HDMA+$10
-	CMP #$0F
-	BEQ .faded_in
-
-	LDX #$05
-	LDY #$06
-..inc_loop
-	LDA.w !VWF_HDMA+$10,x
-	CMP #$0F
-	BEQ ..max_brightness
-	INC.w !VWF_HDMA+$10,x
-	PHX
-	TYX
-	INC.w !VWF_HDMA+$10,x
-	PLX
-..max_brightness	
-
-	INY
-	DEX
-	CPX.w !Timer
-	BNE ..inc_loop
-	LDA.w !Timer
-	BMI ..skip
-	DEC.w !Timer
-..skip
-
-
-.wait_vblank
-	LDA $10
-	BEQ .wait_vblank
-	STZ $10
-	
-	JSR RunAddMusicK			; Call AMK's main code
-
-	BRA .loop
-	
-.faded_in
-	PLP
-	STZ.w !Timer
-	PLY
-
-.return
-	RTS
-
-;################################################
-;# Command $8D
-;# Changes the current topic
-
-ChangeTopic:
-	JSR TopicFadeOut
-
-	SEP #$A0
-	LDA #$00
-	STA $004200
 	REP #$20
-
-	LDA.w !Xposition
-	PHA
-	STZ.w !Xposition
-
-	LDA.w #!VWF_TOPIC_GFX
-	STA $04
-	LDX #$03FE
--	
-	STZ.w !VWF_TOPIC_GFX,x
-	DEX #2
-	BPL -
+	LDA.w !ASMPointer
+	BEQ .no_custom_asm
 	SEP #$20
-	INY
-.Loop
-	LDA [$D5],y
-	BPL .IsChar
-	CMP #$8D
-	BEQ .END
-	REP #$20
-	PEA.w .ReturnedCommand-1
-	AND #$007F
-	ASL A
-	TAX
-	LDA.l CommandAddress,x
-	PHA
-	RTS
-.ReturnedCommand
-	SEP #$20
-	BRA .Loop
-.IsChar
-	JSR DrawChar
-	BRA .Loop
 
-.END
-	LDA #$81
-	STA $004200
--
-
-	LDA $10
-	BEQ -
-	STZ $10
-
-	LDA #$00
-	STA $00420C
-	LDA #$80
-	STA $002100
-	STA $002115
-
-if !sa1 == 1
-	LDX #$120B						; Optimization for DMA upload
-else
-	LDX #$420B						; Optimization for DMA upload
-endif
-	REP #$20
-	LDA #$3000
-	STA $002116
-	LDA #$1801
-	STA $F5,x
-	LDA.w #!VWF_TOPIC_GFX
-	STA $F7,x
-	LDA.w #!VWF_TOPIC_GFX>>8
-	STA $F8,x
-	LDA #$0400
-	STA $FA,x
-	SEP #$20
-	LDA #$01
-	STA $00,x
-	LDA $0D9F
-	STA $01,x
-
-	REP #$20
-	LDA.w !Xposition
-	LSR
-	CLC
-	ADC #$FF80
-	STA $CA10
-	PLA
-	STA.w !Xposition
-	STZ.w !TermChars
-	INY
-	JSR TopicFadeIn
-	
-	JSR RunAddMusicK			; Call AMK's main code
-	
-	RTS
-
-;################################################
-;# Not a command
-;# Fades out OAM tiles
-
-TopFadeOut:
-	LDA !ForcedScroll
-	BNE .return
-
-	PHY
-	PHP
-	SEP #$30
-.loop
-	LDA.w !VWF_HDMA
-	BEQ .faded_out
-	DEC.w !VWF_HDMA
-
-
-.wait_vblank
-	LDA $10
-	BEQ .wait_vblank
-	STZ $10
-	
-	JSR RunAddMusicK			; Call AMK's main code
-
-	BRA .loop
-
-.faded_out
-	PLP
-	PLY
-
-.return
-	RTS
-
-;################################################
-;# Not a command
-;# Fades in the OAM tiles
-
-TopFadeIn:
-	LDA.w !ForcedScroll
-	BNE .return
-
-	PHY
-	PHP
-	SEP #$30
-.loop
-	LDA.w !VWF_HDMA
-	CMP #$0F
-	BEQ .max_brightness
-
-	INC.w !VWF_HDMA
-
-
-.wait_vblank
-	LDA $10
-	BEQ .wait_vblank
-	STZ $10
-
-	JSR RunAddMusicK			; Call AMK's main code
-
-	BRA .loop
-
-.max_brightness
-	PLP
-	PLY
-
-.return
-	RTS
-
-;################################################
-;# Command $8E
-;# Draws OAM tiles on screen
-
-ShowOAM:
-	JSR HideOAM
-	LDA #$0001					; High OAM index
-	STA $0E
-
-	LDX #$0004					; Starting OAM index
-
-	LDA [$D5],y					; Fetch amount of tiles to be drawn on screen
-	AND #$00FF
-	STA $0C
-	INY
-
-; Format:
-; XX YY TT yxs?ccct
-
-.draw_loop
-	LDA [$D5],y					; Get X/Y positions
-	STA $0200,x
-	INY #2
-	LDA [$D5],y					; Grab tile and properties data
-	STA $0202,x
-
-	LDA [$D5],y					; Get extra info for later usage
-	AND #$2000
-	ASL #2
-	STA $08
-
-	INX #4						; Increase indexes for the next tile
-	INY #2
-
-	PHX							; Calculate a proper high OAM index for $0400
-	LDA $0E						; No need for $0420
-	LSR #2
-	ORA #$0400					; $0400 | (index >> 2)
-	STA $00
-	LDA $0E
-	AND #$0003					
-	ASL 
-	TAX
-	LDA ($00)
-	AND.l .Mask,x
-	ASL $08
-	BCC +
-	ORA.l .OR,x
-+
-	STA ($00)
-	PLX
-
-	INC $0E
-	DEC $0C
-	BNE .draw_loop
-
-	JSR TopFadeIn
-	RTS
-
-.Mask
-	dw $FFFC,$FFF3,$FFCF,$FF3F
-.OR	
-	dw $0002,$0008,$0020,$0080
-
-;################################################
-;# Command $8F
-;# Hides every sprite tile
-
-HideOAM:
-	JSR TopFadeOut
-	SEP #$20
-	LDA #$F0
-	JSL $7F8005
-	REP #$20
-	INY
-.return
-	RTS
-
-;################################################
-;# Command $90
-;# Option menu
-
-BranchLabel:
-	LDA !ForcedScroll
-	BNE HideOAM_return
-
-	LDA [$D5],y				; Fetch amount of options
-	STA $06
-	XBA
-	AND #$007F
+	LDA.w !VWF_DATA+2
 	STA $02
-	ASL #4
-	STA $04
-
-	LDA.w !LeftPad
-	SEC
-	SBC #$000A
-	BCS +
-	LDA #$0000
-+	
-	STA $0200
-	LDA.w !SelectMsg
-	ASL #4
+	LDA.w !ASMPointer
 	STA $00
-	LDA.w !LineDrawn
-	ASL #4
-	ADC #$008F
-	ADC $00
-	SEC
-	SBC $04
-	STA $0201
-	LDA.w #!DownArrowGFX
-	STA $0202
+	
+	PHK
+	PER $0002
+	JML [$0000|!dp]
+	REP #$20
 
-	LDA $16
-	AND #$000C
-	BEQ ++
-	CMP #$000C
-	BEQ ++
-	BIT #$0004
-	BEQ +
-	INC.w !SelectMsg
-	LDA.w !SelectMsg
-	CMP $02
-	BCC ++
-	STZ.w !SelectMsg
-	BRA ++
-+
-	DEC.w !SelectMsg
-	BPL ++
-	LDA $02
-	DEC A
-	STA.w !SelectMsg
-++
-	LDA.b $16-1
-	ORA.b $18-1
-	BPL .return
-	LDA #$00F0
-	STA $0201
-	INY
-	INY
-	TYA
-	ASL.w !SelectMsg
-	ADC.w !SelectMsg
-	TAY
-	LDA [$D5],y
-	TAY
-	STZ.w !SelectMsg
-	LDA $06
-	BMI .return
-	INC.w !Inner
-	JSR BreakLine
-	STZ.w !Inner
+.no_custom_asm
 
-.return
+	LDA.w #$8076				; read3($008076)
+	STA $00
+	LDA.w #$0080
+	STA $01
+
+	LDA [$00]					; read3(read3($008076)+$03)
+	CLC
+	ADC #$000A
+	STA $03
+	INC $00
+	INC $00
+	LDA [$00]
+	STA $05
+
+	PHK
+	PER $0002
+	JML [$0003|!dp]
+
+	SEP #$30
+
+	INC $14
+
+	JSL	read3($00A2A6)			; Run (Ex)Animations
+
+	PLP 
+	PLX 
+	PLY 
 	RTS
 
-;################################################
-;# Command $91
-;# Jump label
+;##################################################################################################
+;# Handles commands
 
-JumpLabel:
-	INY
-	LDA [$D5],y
-	TAY
-	RTS
-
-;################################################
-;# Command $92
-;# Skip label
-
-SkipLabel:
-	INY
-	LDA [$D5],y
-	STA.w !SkipPos
-	INY #2
-	RTS
+incsrc "vwf_commands.asm"
 
 ;##################################################################################################
 ;# Draw character on screen
@@ -1350,30 +674,3 @@ Letters:
 	incbin "vwf.bin"
 FontWidth:
 	incbin "width.bin"
-
-;##################################################################################################
-;# Handles AddMusicK
-
-RunAddMusicK:
-	PHP
-	REP #$20
-
-	LDA.w #$8076				; read3($008076)
-	STA $00
-	LDA.w #$0080
-	STA $01
-
-	LDA [$00]					; read3(read3($008076)+$03)
-	CLC
-	ADC #$000A
-	STA $03
-	INC $00
-	INC $00
-	LDA [$00]
-	STA $05
-
-	PHK
-	PER $0002
-	JML [$0003|!dp]
-	PLP 
-	RTS

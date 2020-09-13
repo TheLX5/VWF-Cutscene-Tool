@@ -38,6 +38,15 @@ endif
 !ValidWidth			= !VWF_VARS+$24
 !RightPad			= !VWF_VARS+$28
 
+!SpaceWidth         = !VWF_VARS+$2A
+
+!SavedPointer       = !VWF_VARS+$2C
+!OffsetPointer      = !VWF_VARS+$2E
+!NewPointer         = !VWF_VARS+$30
+
+!ASMPointer         = !VWF_VARS+$32
+
+!AddMusicK_RAM      = $7FB000
 
 !amk_main = read3($008076)
 !amk_new_main = read3(!amk_main+$03)

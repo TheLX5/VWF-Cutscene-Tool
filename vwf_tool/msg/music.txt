@@ -1,7 +1,0 @@
-Currently played music: 20[wait][br]
-music=21[wait][br][music=22]
-music=22[wait][br][music=23]
-music=23[wait][br][music=24]
-music=20[wait][br][music=21]
-Fade out[wait][br][music=80]
-Wait for a while to see the effect.[wait][end=exit]

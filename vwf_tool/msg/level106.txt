@@ -1,3 +1,0 @@
-[topic]Sides Exit[/topic]
-Other ending method.[wait] Press the A button and go back to the overworld. :)[wait]
-[end=sgoal]
