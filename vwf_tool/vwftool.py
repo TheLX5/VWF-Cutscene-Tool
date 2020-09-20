@@ -789,6 +789,7 @@ def generate_json(outputfile: str):
         j.write(json.dumps(json_boilerplate, indent=4))
     print("Finished creating sprite files.")
 
+print ("VWF Dialogues converter v2.0\n")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("defines", help="File that contains the defines used to convert the scripts")

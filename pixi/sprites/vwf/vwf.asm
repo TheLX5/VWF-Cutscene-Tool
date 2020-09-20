@@ -1,5 +1,5 @@
 ;##################################################################################################
-;# Variable Width Font Cutscene v1.0
+;# Variable Width Font Cutscene v2.0
 ;# by Romi, updated by lx5
 ;#
 ;# Proper documentation later.
