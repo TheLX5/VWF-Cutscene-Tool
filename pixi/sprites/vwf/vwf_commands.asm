@@ -932,24 +932,9 @@ PlaySFX1DFC:
 
 ;################################################
 ;# Command $9B
-;# Display RAM
-
-DisplayRAM:
-    RTS
-
-;################################################
-;# Command $9C
-;#  
-
-ChangeRAM:
-    RTS
-
-;################################################
-;# Command $9D
 ;# Updates a manual exanimation trigger
 
 ExAniManual:
-    PHX
     INY
     LDA [$D5],y             ; Grab correct slot
     AND #$000F
@@ -958,15 +943,13 @@ ExAniManual:
     LDA [$D5],y             ; Load frame to show
     STA.l $7FC070,x
     INY
-    PLX
     RTS
 
 ;################################################
-;# Command $9E
+;# Command $9C
 ;# Enables or disables a custom exanimation trigger
 
 ExAniCustom:
-    PHX
     INY
     LDA [$D5],y             ; Grab correct slot
     AND #$000F
@@ -988,7 +971,6 @@ ExAniCustom:
     STA.l $7FC0FC
 
     INY
-    PLX
     RTS
 
 ExAni_OR:
@@ -1004,12 +986,10 @@ ExAni_AND:
     dw ~$1000,~$2000,~$4000,~$8000
 
 ;################################################
-;# Command $9F
+;# Command $9D
 ;# Enables or disables a one shot exanimation trigger
 
 ExAniOneShot:
-    PHX
-
     INY
     LDA [$D5],y             ; Grab correct slot
     AND #$001F
@@ -1046,247 +1026,83 @@ ExAniOneShot:
 .return
 
     INY
-    PLX
     RTS 
 
 ;################################################
-;# Command $A0
-;# 
+;# Command $9E
+;# Turns on echo fo SFXs
 
-SetConditionalDM16:
-	PHX
-	INY
-	LDA [$D5],y
-	AND #$0007
-	ASL
-	TAX 
-	LDA.l ExAni_OR,x
-	STA $0A
-	LDA [$D5],y
-	LSR #3
-	TAX
-	LDA.l $7FC060,x
-	ORA $0A
-	STA.l $7FC060,x
-	INY 
-	PLX
-    RTS
-
-;################################################
-;# Command $A1
-;# 
-
-ClearConditionalDM16:
-	PHX
-	INY
-	LDA [$D5],y
-	AND #$0007
-	ASL
-	TAX 
-	LDA.l ExAni_AND,x
-	STA $0A
-	LDA [$D5],y
-	LSR #3
-	TAX
-	LDA.l $7FC060,x
-	AND $0A
-	STA.l $7FC060,x
-	INY 
-	PLX
-    RTS
-
-;################################################
-;# Command $A2
-;# Gives coins to the player
-
-GiveCoins:
-	INY
+TurnOnSFXEcho:
 	SEP #$20
-	LDA [$D5],y
-	STA $13CC
+	LDA #$06
+	STA $1DFA
 	REP #$20
 	INY
     RTS
 
 ;################################################
-;# Command $A3
-;# Steals coins from the player
+;# Command $9F
+;# Turns off echo fo SFXs
 
-StealCoins:
+TurnOffSFXEcho:
+	SEP #$20
+	LDA #$05
+	STA $1DFA
+	REP #$20
+	INY
     RTS
 
 ;################################################
-;# Command $
-;# 
-
-GiveYoshiCoins:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-StealYoshiCoins:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-GiveLives:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-StealLives:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-GiveBonusStars:
-    RTS 
-
-;################################################
-;# Command $
-;# 
-
-StealBonusStars:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-SetPowerup:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-SetItemBox:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-SetYoshi:
-	RTS 
-
-;################################################
-;# Command $
-;# 
-
-SetMidpoint:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-CheckMidpoint:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-CheckEvent:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-CheckNumEvents:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-Check1upCheckpoints:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-Check3upMoon:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-CheckYoshiCoin:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-CheckSwitchPalace:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-TurnOnEcho:
-    RTS
-
-;################################################
-;# Command $
-;# 
-
-TurnOffEcho:
-    RTS
-
-;################################################
-;# Command $
-;# 
+;# Command $A0
+;# Executes ASM code ONCE
 
 ExecuteASM:
-    PHP
-    
-    LDA [$D5],y
-    STA $00                 ; Get code pointer
-    INY #2
-    LDA [$D5],y
-    STA $02
     INY
+	PHY
+    PHB
+    PHD
+    PHP
+	LDA [$D5],y
+	AND #$00FF
+	ASL 
+	ADC.w !VWF_ASM_PTRS
+	STA $00
+	LDA.w !VWF_ASM_PTRS+2
+	STA $02
+	LDA [$00]
+	STA $00
+	INY
 
-    SEP #$30
+
+    SEP #$20
 	PHK
 	PER $0002               ; Execute code
 	JML [$0000|!dp]
-    REP #$30
 
-    LDA [$D5],y             ; Return to this index
-    TAY
     PLP
+    PLD
+    PLB
+	PLY
+	INY
     RTS
 
 ;################################################
-;# Command $
-;# 
+;# Command $A1
+;# Runs ASM code every frame.
 
 ExecuteASMEveryFrame:
     INY 
-    LDA [$D5],y
-    STA.w !ASMPointer
-    INY #2
+	LDA [$D5],y
+	AND #$00FF
+	ASL 
+	ADC.w !VWF_ASM_PTRS
+	STA.w !ASMPointer
+    INY 
     RTS
 
 ;################################################
-;# Command $
-;# 
+;# Command $A2
+;# Stops ASM code.
 
 StopASMEveryFrame:
     STZ.w !ASMPointer

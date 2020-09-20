@@ -1,3 +1,4 @@
 00 hello_world.txt
-01 compare.txt
-02 exanimations.txt
+01 exanimations.txt
+02 compare.txt
+03 asm.txt

@@ -43,7 +43,7 @@ But I'm going to still show examples of this command anyway.[wait][pad=64,64][br
 And since I have nothing to say here, so...[wait=32] Next.[wait][pad=8,8][br]
 
 //music
-[font color=3]Changing music[/font color][music=03][wait=64][br]
+[font color=3]Changing music[/font color][music=0C][wait=64][br]
 This command can also change music into a completely different one![wait][br]
 It works together with AddMusicK in order to play songs. No more weird limitations from older AddMusic programs.[wait][br]
 Keep in mind that there will always be a significant delay when switching local songs compared to switching to global songs.[wait][br]

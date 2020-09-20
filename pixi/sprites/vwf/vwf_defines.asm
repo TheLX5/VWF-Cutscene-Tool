@@ -46,6 +46,7 @@ endif
 
 !ASMPointer         = !VWF_VARS+$32
 
+!VWF_ASM_PTRS       = !VWF_VARS+$34
 !AddMusicK_RAM      = $7FB000
 
 !amk_main = read3($008076)
