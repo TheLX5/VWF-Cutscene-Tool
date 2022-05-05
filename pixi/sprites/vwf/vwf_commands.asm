@@ -948,8 +948,10 @@ ExAniManual:
     AND #$000F
     TAX
     INY
+	REP #$20
     LDA [$D5],y             ; Load frame to show
     STA.l $7FC070,x
+	SEP #$20
     INY
     RTS
 
