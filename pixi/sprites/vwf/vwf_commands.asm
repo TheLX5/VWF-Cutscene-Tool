@@ -679,8 +679,16 @@ ShowOAM:
 HideOAM:
 	JSR TopFadeOut
 	SEP #$20
-	LDA #$F0
-	JSL $7F8005
+	if !SA1 == 1
+		PEA $4000
+		PLB 
+		LDA #$F0
+		JSL $7F8005
+		PLB
+	else
+		LDA #$F0
+		JSL $7F8005
+	endif
 	REP #$20
 	INY
 .return
