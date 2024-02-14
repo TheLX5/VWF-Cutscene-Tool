@@ -5,7 +5,7 @@ Original by Romi, upgrade by lx5.
 Better readme later.
 
 ### Requiriments
-* AddMusicK 1.0.6
+* AddMusicK 1.0.9
 * PIXI 1.2.15
 * Python 3
 * (Optional) SA-1 Pack 1.32
